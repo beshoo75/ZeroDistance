@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> المسافة صفر</title>
+    
+    <!-- Scripts & Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
+        
+        body { 
+            font-family: 'Tajawal', sans-serif; 
+            background-color: #fcfcfd; 
+            direction: rtl; 
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .marquee-container {
+            width: 100%;
+            overflow: hidden;
+            background: #1e1b4b;
+            height: 54px;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .marquee-content {
+            display: flex;
+            white-space: nowrap;
+            animation: scroll-news 40s linear infinite;
+        }
+
+        @keyframes scroll-news {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .marquee-content:hover {
+            animation-play-state: paused;
+        }
+
+        .news-badge {
+            position: absolute;
+            right: 0;
+            z-index: 50;
+            background: #4f46e5;
+            color: white;
+            padding: 0 25px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+            font-size: 14px;
+            box-shadow: -10px 0 20px rgba(0,0,0,0.5);
+        }
+
+        .sidebar-transition { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        .comment-bubble {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            border: 1px solid #f1f5f9;
+            font-size: 13px;
+        }
+
+        .zoom-overlay {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- Icons (SVG) ---
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const icons = {
+                award: <g fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="6"/><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/></g>,
+                users: <g fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></g>,
+                megaphone: <path fill="none" stroke="currentColor" strokeWidth="2" d="m3 11 18-5v12L3 14v-3z"/>,
+                calendar: <g fill="none" stroke="currentColor" strokeWidth="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><path d="M16 2v4M8 2v4m-5 4h18"/></g>,
+                plus: <path fill="none" stroke="currentColor" strokeWidth="2" d="M12 5v14M5 12h14"/>,
+                logout: <path fill="none" stroke="currentColor" strokeWidth="2" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14 5-5-5-5m5 5H9"/>,
+                trash: <path fill="none" stroke="currentColor" strokeWidth="2" d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>,
+                trending: <path fill="none" stroke="currentColor" strokeWidth="2" d="m22 7-8.5 8.5-5-5L2 17M16 7h6v6"/>,
+                send: <path fill="none" stroke="currentColor" strokeWidth="2" d="m22 2-7 20-4-9-9-4 20-7Z"/>,
+                trophy: <path fill="none" stroke="currentColor" strokeWidth="2" d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18M12 22v-4m-7-2 1.5-9h11l1.5 9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"/>,
+                x: <path fill="none" stroke="currentColor" strokeWidth="2" d="M18 6 6 18M6 6l12 12"/>,
+                sparkles: <path fill="none" stroke="currentColor" strokeWidth="2" d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275 1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>,
+                menu: <path fill="none" stroke="currentColor" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/>,
+                check: <path fill="none" stroke="currentColor" strokeWidth="2" d="M20 6L9 17l-5-5"/>,
+                file: <g><path fill="none" stroke="currentColor" strokeWidth="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path fill="none" stroke="currentColor" strokeWidth="2" d="M14 2v6h6"/></g>,
+                upload: <path fill="none" stroke="currentColor" strokeWidth="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5-5 5 5m-5-5v12"/>,
+                image: <g fill="none" stroke="currentColor" strokeWidth="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></g>,
+                maximize: <path fill="none" stroke="currentColor" strokeWidth="2" d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+            };
+            return (
+                <svg width={size} height={size} viewBox="0 0 24 24" className={className}>
+                    {icons[name] || <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>}
+                </svg>
+            );
+        };
+
+        const schoolName = "ثانوية بحرة المجاهدين الثانية";
+        const principalName = "إيمان الحربي";
+
+        const App = () => {
+            const [appMode, setAppMode] = React.useState('public'); 
+            const [activeTab, setActiveTab] = React.useState('dashboard');
+            const [loading, setLoading] = React.useState(true);
+            const [currentAdmin, setCurrentAdmin] = React.useState(null);
+            const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+            const [loginStep, setLoginStep] = React.useState('form');
+
+            const [posts, setPosts] = React.useState([
+                { 
+                    id: 'p1', 
+                    title: 'مسابقة "نجمة التميز الرقمي" لهذا الأسبوع 🌟', 
+                    type: 'مسابقة', 
+                    content: 'عزيزاتي الطالبات المبدعات، هل تمتلكين مهارة في التصميم أو المونتاج؟ شاركينا الآن بأفضل عمل رقمي يمثل قيم مدرستنا، واربحي لقب نجمة الأسبوع وجوائز قيمة!', 
+                    createdAt: new Date().toISOString(), 
+                    comments: [
+                        { author: "زائر", text: "متحمسة جداً للمشاركة! 😍", date: new Date().toISOString() }
+                    ], 
+                    authorName: principalName 
+                }
+            ]);
+            
+            const [members, setMembers] = React.useState([
+                { id: 'm1', name: principalName, role: 'مديرة المدرسة', username: 'admin', password: '1234' },
+                { id: 'm2', name: 'وردة عسيري', role: 'رئيسة اللجنة', username: 'warda', password: '000' }
+            ]);
+
+            const [tasks, setTasks] = React.useState([
+                { id: 1, title: 'تجهيز ملف الجودة', status: 'completed', assignedTo: 'وردة عسيري' }
+            ]);
+
+            const [commentInputs, setCommentInputs] = React.useState({});
+            const [showModal, setShowModal] = React.useState(null);
+            const [formData, setFormData] = React.useState({ type: 'إعلان' });
+            const [loginData, setLoginData] = React.useState({ user: '', pass: '' });
+            const [recoveryCode, setRecoveryCode] = React.useState('');
+            const [recoveryMessage, setRecoveryMessage] = React.useState(null);
+            const [selectedMedia, setSelectedMedia] = React.useState(null);
+            const [zoomedMedia, setZoomedMedia] = React.useState(null);
+
+            React.useEffect(() => {
+                setTimeout(() => setLoading(false), 800);
+            }, []);
+
+            const handleLogin = () => {
+                if (loginData.user === 'admin' && loginData.pass === '1234') {
+                    setCurrentAdmin({ name: principalName, role: 'مديرة المدرسة', id: 'master' });
+                    setAppMode('admin');
+                } else {
+                    const m = members.find(x => x.username === loginData.user && x.password === loginData.pass);
+                    if (m) { setCurrentAdmin(m); setAppMode('admin'); }
+                    else alert("بيانات الدخول غير صحيحة");
+                }
+            };
+
+            const handleRecovery = () => {
+                if (recoveryCode === '2222') {
+                    setRecoveryMessage({ type: 'success', text: 'تمت الاستعادة بنجاح! كلمة مرور المديرة هي: 1234' });
+                } else {
+                    setRecoveryMessage({ type: 'error', text: 'رمز الطوارئ الذي أدخلته غير صحيح.' });
+                }
+            };
+
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setSelectedMedia({
+                            url: reader.result,
+                            type: file.type.startsWith('video') ? 'video' : 'image'
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handleSave = () => {
+                const final = { 
+                    ...formData, 
+                    type: formData.type || 'إعلان', 
+                    id: Date.now(), 
+                    createdAt: new Date().toISOString(), 
+                    authorName: currentAdmin?.name || 'إدارة المدرسة', 
+                    comments: [],
+                    media: selectedMedia
+                };
+                if (showModal === 'posts') setPosts([final, ...posts]);
+                if (showModal === 'members') setMembers([...members, final]);
+                setShowModal(null); 
+                setFormData({ type: 'إعلان' });
+                setSelectedMedia(null);
+            };
+
+            const handleAddComment = (postId) => {
+                const text = commentInputs[postId];
+                if (!text || text.trim() === "") return;
+                const newComment = { text: text.trim(), author: currentAdmin ? currentAdmin.name : "زائر", date: new Date().toISOString() };
+                setPosts(posts.map(p => p.id === postId ? { ...p, comments: [...(p.comments || []), newComment] } : p));
+                setCommentInputs({ ...commentInputs, [postId]: "" });
+            };
+
+            const LogoComponent = ({ isSidebar = false, collapsed = false, mode = 'public' }) => {
+                const part1 = mode === 'public' ? "المسافة" : "بوابة";
+                const part2 = mode === 'public' ? "صفر" : "التميز";
+                return (
+                    <div className="flex flex-col items-center">
+                        <div className={`flex items-center gap-4 ${collapsed ? 'justify-center' : ''}`}>
+                            <div className="bg-slate-950 p-3 rounded-2xl shadow-lg border border-white/10">
+                                <Icon name="award" className="text-amber-400" size={isSidebar ? 22 : 30} />
+                            </div>
+                            {!collapsed && (
+                                <div className="flex flex-col text-right">
+                                    <div className="flex items-center gap-2">
+                                        <span className={`${isSidebar ? 'text-lg' : 'text-2xl'} font-black text-slate-900 tracking-tighter`}>{part1}</span>
+                                        <span className="bg-slate-950 text-amber-400 font-black px-3 py-1 rounded-xl text-xs shadow-lg">{part2}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            };
+
+            if (loading) return <div className="h-screen flex items-center justify-center font-bold text-indigo-600">جاري تحميل المنصة ...</div>;
+
+            if (appMode === 'public') {
+                return (
+                    <div className="min-h-screen text-right" dir="rtl">
+                        <header className="h-20 bg-white border-b px-8 flex items-center justify-between sticky top-0 z-50 backdrop-blur-md bg-white/80">
+                            <LogoComponent mode="public" isSidebar={true} />
+                            <button onClick={() => setAppMode('login')} className="bg-slate-900 text-white px-7 py-2.5 rounded-full font-bold text-sm shadow-md transition-transform active:scale-95">دخول الإدارة</button>
+                        </header>
+
+                        <div className="bg-slate-900 text-white py-24 px-8 border-b-4 border-amber-500 relative overflow-hidden">
+                            <div className="max-w-6xl mx-auto relative z-10 text-right">
+                                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-400 text-[10px] font-black uppercase mb-6 tracking-widest"><Icon name="sparkles" size={14} /> المنصة الإعلامية الرسمية</span>
+                                <h4 className="text-5xl lg:text-7xl font-black mb-6 leading-tight">نصنع التميز، ونقرب <span className="text-amber-400">المسافات.</span></h4>
+                                <p className="text-slate-400 text-xl font-medium max-w-2xl leading-relaxed">نافذتكم التفاعلية الرسمية لمدرسة {schoolName}.</p>
+                            </div>
+                            <div className="marquee-container mt-16 border-t border-white/10">
+                                <div className="news-badge uppercase tracking-widest font-black">عاجل</div>
+                                <div className="marquee-content">
+                                    {posts.map((p, i) => (<span key={i} className="mx-12 text-sm font-medium flex items-center"><span className="text-amber-400 ml-4">●</span> {p.title}</span>))}
+                                    {posts.map((p, i) => (<span key={`dup-${i}`} className="mx-12 text-sm font-medium flex items-center"><span className="text-amber-400 ml-4">●</span> {p.title}</span>))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <main className="max-w-7xl mx-auto p-12 space-y-20 text-right">
+                            {/* قسم المسابقات */}
+                            <section>
+                                <h3 className="text-3xl font-black text-slate-900 border-r-8 border-amber-400 pr-4 mb-10 uppercase">المسابقات</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-right">
+                                    {posts.filter(x=>x.type==='مسابقة').map(p => (
+                                        <div key={p.id} className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden group hover:shadow-xl transition-all flex flex-col">
+                                            {p.media && (
+                                                <div className="h-48 overflow-hidden bg-slate-100 relative group/media cursor-pointer" onClick={() => setZoomedMedia(p.media)}>
+                                                    {p.media.type === 'video' ? <video src={p.media.url} className="w-full h-full object-cover"/> : <img src={p.media.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>}
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <Icon name="maximize" size={32} className="text-white drop-shadow-lg" />
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="p-8 relative pt-12 flex-1 flex flex-col">
+                                                <div className="absolute top-0 left-8 -mt-6 bg-amber-400 p-4 rounded-2xl shadow-xl"><Icon name="trophy" size={24}/></div>
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <h4 className="text-xl font-black text-slate-900 leading-tight">{p.title}</h4>
+                                                    <span className="text-[9px] font-bold text-slate-300">{new Date(p.createdAt).toLocaleDateString('ar-SA')}</span>
+                                                </div>
+                                                <p className="text-[10px] font-black text-amber-600 mb-4 bg-amber-50 inline-block px-3 py-1 rounded-lg italic w-fit">بواسطة: {p.authorName || 'إدارة المدرسة'}</p>
+                                                <p className="text-slate-600 text-sm leading-relaxed mb-8 flex-1">{p.content}</p>
+                                                <div className="bg-slate-50 p-5 rounded-[2rem] border border-slate-100 shadow-inner mt-4">
+                                                    <p className="text-[9px] font-black text-slate-400 mb-3 flex items-center gap-2">التفاعل والمشاركات ({p.comments?.length || 0})</p>
+                                                    <div className="space-y-2 mb-4 max-h-32 overflow-y-auto custom-scrollbar">
+                                                        {(p.comments || []).map((comm, idx) => (
+                                                            <div key={idx} className="comment-bubble shadow-sm">
+                                                                <div className="flex justify-between items-center mb-1"><span className="text-[9px] font-black text-indigo-600">{comm.author}</span><span className="text-[8px] text-slate-400">{new Date(comm.date).toLocaleDateString('ar-SA')}</span></div>
+                                                                <p className="text-slate-700 text-xs">{comm.text}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <input className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none focus:ring-2 ring-amber-500 shadow-sm text-right" placeholder="شاركينا إجابتك..." value={commentInputs[p.id] || ""} onChange={(e) => setCommentInputs({ ...commentInputs, [p.id]: e.target.value })} />
+                                                        <button onClick={() => handleAddComment(p.id)} className="bg-amber-500 text-white p-2.5 rounded-xl shadow-md hover:bg-slate-900 transition-all active:scale-95"><Icon name="send" size={16}/></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="text-3xl font-black text-slate-900 border-r-8 border-indigo-600 pr-4 mb-10 uppercase">أحدث الإعلانات</h3>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                    {posts.filter(x=>x.type!=='مسابقة').length > 0 ? (
+                                        posts.filter(x=>x.type!=='مسابقة').map(p => (
+                                            <div key={p.id} className="bg-white rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden hover:shadow-xl transition-all flex flex-col">
+                                                {p.media && (
+                                                    <div className="h-64 overflow-hidden bg-slate-100 relative group/media cursor-pointer" onClick={() => setZoomedMedia(p.media)}>
+                                                        {p.media.type === 'video' ? <video src={p.media.url} className="w-full h-full object-cover"/> : <img src={p.media.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>}
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <Icon name="maximize" size={40} className="text-white drop-shadow-lg" />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div className="p-10 flex flex-col flex-1">
+                                                    <div className="flex justify-between items-start mb-6">
+                                                        <div>
+                                                            <span className="bg-indigo-50 text-indigo-700 px-4 py-1 rounded-xl text-[10px] font-black inline-block uppercase tracking-widest mb-2">{p.type || 'إعلان عام'}</span>
+                                                            <p className="text-[10px] font-black text-indigo-400 mr-1 italic">بواسطة: {p.authorName || 'إدارة المدرسة'}</p>
+                                                        </div>
+                                                        <span className="text-[9px] font-bold text-slate-300">{new Date(p.createdAt).toLocaleDateString('ar-SA')}</span>
+                                                    </div>
+                                                    <h4 className="text-xl font-black mb-4 leading-tight text-slate-900">{p.title}</h4>
+                                                    <p className="text-slate-600 text-sm leading-relaxed mb-8 flex-1">{p.content}</p>
+                                                    <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 shadow-inner">
+                                                        <p className="text-[10px] font-black text-slate-400 mb-4 flex items-center gap-2">تعليقات الزوار ({p.comments?.length || 0})</p>
+                                                        <div className="space-y-2 mb-6 max-h-40 overflow-y-auto custom-scrollbar">
+                                                            {(p.comments || []).map((comm, idx) => (
+                                                                <div key={idx} className="comment-bubble shadow-sm">
+                                                                    <div className="flex justify-between items-center mb-1"><span className="text-[10px] font-black text-indigo-600">{comm.author}</span><span className="text-[9px] text-slate-400 font-bold">{new Date(comm.date).toLocaleDateString('ar-SA')}</span></div>
+                                                                    <p className="text-slate-700 leading-relaxed text-sm">{comm.text}</p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <div className="flex gap-3">
+                                                            <input className="flex-1 bg-white border border-slate-200 rounded-2xl px-5 py-3 text-sm outline-none focus:ring-2 ring-indigo-500 transition-all shadow-sm text-right" placeholder="شاركينا برأيك هنا..." value={commentInputs[p.id] || ""} onChange={(e) => setCommentInputs({ ...commentInputs, [p.id]: e.target.value })} />
+                                                            <button onClick={() => handleAddComment(p.id)} className="bg-slate-950 text-white p-3.5 rounded-2xl shadow-lg hover:bg-indigo-600 active:scale-95 transition-all"><Icon name="send" size={20}/></button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="col-span-full py-16 bg-white border border-dashed rounded-[3rem] flex flex-col items-center justify-center text-slate-400 font-bold">
+                                            <Icon name="megaphone" size={48} className="opacity-10 mb-4" />
+                                            <p>لا يوجد إعلان جديد</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+                        </main>
+
+                        {/* شاشة التكبير (Lightbox) */}
+                        {zoomedMedia && (
+                            <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4 zoom-overlay" onClick={() => setZoomedMedia(null)}>
+                                <button className="absolute top-8 left-8 text-white hover:text-rose-500 transition-colors z-[210] p-2 bg-white/10 rounded-full" onClick={() => setZoomedMedia(null)}>
+                                    <Icon name="x" size={32} />
+                                </button>
+                                <div className="max-w-5xl max-h-[90vh] w-full flex items-center justify-center relative" onClick={e => e.stopPropagation()}>
+                                    {zoomedMedia.type === 'video' ? (
+                                        <video src={zoomedMedia.url} controls autoPlay className="max-w-full max-h-[90vh] rounded-2xl shadow-2xl" />
+                                    ) : (
+                                        <img src={zoomedMedia.url} className="max-w-full max-h-[90vh] rounded-2xl shadow-2xl object-contain" />
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            // --- لوحة الإدارة ---
+            if (appMode === 'login') {
+                return (
+                    <div className="h-screen bg-slate-50 flex items-center justify-center p-6 text-right" dir="rtl">
+                        <div className="bg-white p-12 rounded-[3.5rem] shadow-2xl w-full max-w-md text-center border border-slate-100 animate-in fade-in zoom-in-95 duration-500">
+                            <LogoComponent mode="admin" />
+                            <p className="text-[10px] font-bold text-slate-400 mt-2 tracking-widest uppercase mb-10">{schoolName}</p>
+                            
+                            {loginStep === 'form' ? (
+                                <div className="space-y-6">
+                                    <div className="space-y-4">
+                                        <input className="w-full p-4 bg-slate-100 rounded-2xl font-bold text-center outline-none focus:ring-2 ring-indigo-500 transition-all border-none shadow-inner" placeholder="اسم المستخدم" onChange={e=>setLoginData({...loginData, user: e.target.value})} />
+                                        <input className="w-full p-4 bg-slate-100 rounded-2xl font-bold text-center outline-none tracking-widest shadow-inner focus:ring-2 ring-indigo-500 transition-all" type="password" placeholder="كلمة المرور" onChange={e=>setLoginData({...loginData, pass: e.target.value})} onKeyDown={e=>e.key==='Enter'&&handleLogin()} />
+                                    </div>
+                                    <button onClick={handleLogin} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl hover:bg-slate-900 transition-all active:scale-95">دخول النظام</button>
+                                    
+                                    <div className="flex flex-col gap-4 mt-8 pt-6 border-t border-slate-100">
+                                        <button onClick={() => setLoginStep('recovery')} className="text-indigo-600 font-bold text-sm hover:underline">نسيت كلمة المرور؟</button>
+                                        <button onClick={() => setAppMode('public')} className="text-slate-400 font-black text-xs hover:text-indigo-600 transition-colors uppercase tracking-widest">العودة للرئيسية</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    <div className="py-2 text-center">
+                                        <h3 className="text-xl font-black text-slate-800 mb-1">استعادة الحساب</h3>
+                                        <p className="text-[10px] font-bold text-slate-400">يرجى إدخال رمز الطوارئ السري الخاص بالمديرة</p>
+                                    </div>
+                                    <input className="w-full p-4 bg-amber-50 rounded-2xl font-bold text-center outline-none border-2 border-amber-100 focus:border-amber-400 transition-all tracking-widest shadow-inner" placeholder="أدخلي الرمز هنا..." type="password" value={recoveryCode} onChange={e=>setRecoveryCode(e.target.value)} />
+                                    {recoveryMessage && <p className={`text-xs font-bold p-3 rounded-xl text-center ${recoveryMessage.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{recoveryMessage.text}</p>}
+                                    <button onClick={handleRecovery} className="w-full bg-amber-500 text-white py-4 rounded-2xl font-black text-lg shadow-xl hover:bg-amber-600 active:scale-95 transition-all">تحقق من الرمز</button>
+                                    <button onClick={() => {setLoginStep('form'); setRecoveryMessage(null); setRecoveryCode('');}} className="text-slate-400 font-bold text-sm hover:text-slate-900 block mx-auto mt-4">رجوع للخلف</button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="flex h-screen bg-slate-50 overflow-hidden text-right" dir="rtl">
+                    <aside className={`bg-white border-l p-8 flex flex-col shadow-sm sidebar-transition relative overflow-y-auto custom-scrollbar ${sidebarCollapsed ? 'w-24 px-4' : 'w-80'}`}>
+                        <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="absolute -left-4 top-10 bg-white border shadow-md p-2 rounded-xl text-slate-400 hover:text-indigo-600 z-50 hover:scale-110 transition-transform">
+                            <Icon name="menu" size={20} />
+                        </button>
+                        <LogoComponent mode="admin" isSidebar={true} collapsed={sidebarCollapsed} />
+                        {!sidebarCollapsed && (
+                            <div className="mt-10 bg-indigo-50 p-6 rounded-3xl border border-indigo-100 text-indigo-950 mb-10 relative overflow-hidden shrink-0 text-right">
+                                <div className="absolute top-0 right-0 w-1.5 h-full bg-indigo-500"></div>
+                                <p className="text-[10px] font-black uppercase opacity-60 tracking-widest mb-1">فريق التميز،</p>
+                                <p className="font-black text-lg leading-none">{currentAdmin?.name}</p>
+                                <p className="text-[10px] font-bold text-slate-500 truncate mt-1">{currentAdmin?.role}</p>
+                            </div>
+                        )}
+                        <nav className={`flex-1 space-y-2 mt-10`}>
+                            {[
+                                { id: 'dashboard', label: 'الرؤية الشاملة', icon: 'trending' }, 
+                                { id: 'posts', label: 'المنشورات والمسابقات', icon: 'megaphone' }, 
+                                { id: 'members', label: 'أعضاء الفريق', icon: 'users' }, 
+                                { id: 'tasks', label: 'سجل المهام', icon: 'check' },
+                                { id: 'calendar', label: 'التقويم المدرسي', icon: 'calendar' },
+                                { id: 'reports', label: 'التقارير والإحصائيات', icon: 'file' }
+                            ].map(item => (
+                                <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center p-4 rounded-2xl font-black text-sm transition-all ${sidebarCollapsed ? 'justify-center' : 'justify-between'} ${activeTab === item.id ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}>
+                                    {!sidebarCollapsed && <span>{item.label}</span>}
+                                    <Icon name={item.icon} size={18} />
+                                </button>
+                            ))}
+                        </nav>
+                        <button onClick={() => {setAppMode('public'); setCurrentAdmin(null);}} className={`mt-8 shrink-0 flex items-center justify-center p-4 bg-rose-50 text-rose-600 rounded-2xl font-black hover:bg-rose-600 hover:text-white transition-all`}>
+                            <Icon name="logout" size={18}/>{!sidebarCollapsed && <span className="mr-3 text-sm">خروج</span>}
+                        </button>
+                    </aside>
+
+                    <main className="flex-1 flex flex-col min-w-0 text-right">
+                        <header className="h-20 bg-white border-b px-10 flex items-center justify-between shadow-sm sticky top-0 z-30">
+                            <h2 className="text-xl font-black text-slate-800 uppercase text-right">
+                                {activeTab === 'dashboard' ? 'الرؤية الشاملة' : 
+                                 activeTab === 'members' ? 'إدارة فريق التميز' : 
+                                 activeTab === 'posts' ? 'المنشورات والمسابقات' :
+                                 activeTab === 'tasks' ? 'سجل المهام (قريباً)' :
+                                 activeTab === 'calendar' ? 'التقويم المدرسي (قريباً)' :
+                                 activeTab === 'reports' ? 'التقارير والإحصائيات (قريباً)' :
+                                 'لوحة التحكم'}
+                            </h2>
+                            {['posts', 'members'].includes(activeTab) && (
+                                <button onClick={() => setShowModal(activeTab)} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 shadow-lg hover:bg-slate-900 transition-all active:scale-95">
+                                    <Icon name="plus" size={20}/> {activeTab === 'members' ? 'إضافة عضو جديد' : 'إضافة جديد'}
+                                </button>
+                            )}
+                        </header>
+
+                        <div className="flex-1 p-10 overflow-y-auto custom-scrollbar">
+                            {/* الرؤية الشاملة */}
+                            {activeTab === 'dashboard' && (
+                                <div className="space-y-10 animate-in fade-in duration-500 text-right">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                                        <div className="bg-slate-900 p-6 rounded-3xl text-white shadow-lg relative overflow-hidden"><div className="absolute top-0 right-0 w-full h-1 bg-amber-500"></div><p className="opacity-50 text-[10px] font-black mb-2 uppercase tracking-widest">مؤشر الإنجاز</p><h4 className="text-3xl font-black text-amber-400">100%</h4></div>
+                                        <div className="bg-white p-6 rounded-3xl border shadow-sm"><p className="text-slate-400 text-[10px] font-black mb-2 uppercase">المنشورات</p><h4 className="text-3xl font-black">{posts.length}</h4></div>
+                                        <div className="bg-white p-6 rounded-3xl border shadow-sm"><p className="text-slate-400 text-[10px] font-black mb-2 uppercase">الأعضاء</p><h4 className="text-3xl font-black">{members.length}</h4></div>
+                                        <div className="bg-white p-6 rounded-3xl border shadow-sm"><p className="text-slate-400 text-[10px] font-black mb-2 uppercase">المهام المكتملة</p><h4 className="text-3xl font-black">{tasks.length}</h4></div>
+                                    </div>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                        <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm">
+                                            <h4 className="text-lg font-black mb-8 border-r-4 border-indigo-600 pr-4">أعضاء فريق التميز</h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {members.map(m => (
+                                                    <div key={m.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border shadow-sm">
+                                                        <div className="w-10 h-10 bg-indigo-100 text-indigo-700 rounded-xl flex items-center justify-center font-black text-sm shadow-inner">{m.name.charAt(0)}</div>
+                                                        <div className="text-right"><p className="font-black text-slate-800 text-xs">{m.name}</p><p className="text-[10px] font-bold text-slate-400 uppercase">{m.role}</p></div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-950 p-10 rounded-[2.5rem] text-white text-center flex flex-col items-center justify-center shadow-2xl relative overflow-hidden">
+                                            <div className="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
+                                            <Icon name="award" size={80} className="text-amber-400 mb-6 animate-pulse" />
+                                            <h4 className="font-black text-lg mb-2 text-white">منصة التميز الرقمي</h4>
+                                            <p className="text-[11px] opacity-40 font-medium leading-relaxed px-4 text-white">رؤيتنا: بناء جيل متميز يواكب تطلعات المستقبل لمدرسة {schoolName}.</p>
+                                        </div>
+                                    </div>
+                                    <div className="pt-10 border-t text-center"><p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">جميع الحقوق محفوظة © {schoolName}</p></div>
+                                </div>
+                            )}
+
+                            {/* المنشورات في الإدارة */}
+                            {activeTab === 'posts' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-right">
+                                    {posts.filter(p => currentAdmin?.id === 'master' || p.authorName === currentAdmin?.name).map(p => (
+                                        <div key={p.id} className="bg-white rounded-[2.5rem] border shadow-sm flex flex-col h-full group hover:shadow-xl transition-all border-b-8 border-indigo-500/5 overflow-hidden">
+                                            {p.media && (
+                                                <div className="h-40 overflow-hidden bg-slate-50 relative group/media cursor-pointer" onClick={() => setZoomedMedia(p.media)}>
+                                                    {p.media.type === 'video' ? <video src={p.media.url} className="w-full h-full object-cover"/> : <img src={p.media.url} className="w-full h-full object-cover"/>}
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <Icon name="maximize" size={24} className="text-white" />
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="p-8 flex flex-col flex-1">
+                                                <div className="flex justify-between items-center mb-6">
+                                                    <div className="flex flex-col text-right">
+                                                        <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black mb-1 w-fit ${p.type === 'مسابقة' ? 'bg-amber-50 text-amber-700' : 'bg-indigo-50 text-indigo-700'}`}>{p.type || 'إعلان عام'}</span>
+                                                        <p className="text-[10px] font-bold text-slate-400 italic">بواسطة: {p.authorName}</p>
+                                                    </div>
+                                                    <button onClick={() => setPosts(posts.filter(x=>x.id!==p.id))} className="text-rose-100 hover:text-rose-600 transition-colors"><Icon name="trash" size={18}/></button>
+                                                </div>
+                                                <h4 className="text-xl font-black mb-4 text-slate-900 leading-tight">{p.title}</h4>
+                                                <p className="text-slate-600 text-sm leading-relaxed flex-1">{p.content}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* إدارة أعضاء الفريق (التفاصيل الكاملة) */}
+                            {activeTab === 'members' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-right">
+                                    {members.map(m => (
+                                        <div key={m.id} className="bg-white p-10 rounded-[3rem] border shadow-sm text-center relative group hover:shadow-xl transition-all border-b-8 border-indigo-500/10">
+                                            {/* زر الحذف يظهر للمديرة فقط */}
+                                            {currentAdmin?.id === 'master' && m.id !== 'm1' && (
+                                                <button onClick={() => setMembers(members.filter(x=>x.id!==m.id))} className="absolute top-6 left-6 text-rose-200 hover:text-rose-600 transition-colors">
+                                                    <Icon name="trash" size={20}/>
+                                                </button>
+                                            )}
+                                            <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 text-3xl font-black shadow-inner">{m.name.charAt(0)}</div>
+                                            <h4 className="text-xl font-black text-slate-900 mb-2">{m.name}</h4>
+                                            <span className="text-[10px] font-black text-indigo-700 bg-indigo-50 px-4 py-1 rounded-xl uppercase tracking-widest">{m.role}</span>
+                                            
+                                            {/* بيانات الدخول تظهر للمديرة فقط */}
+                                            {currentAdmin?.id === 'master' && (
+                                                <div className="mt-8 bg-slate-50 p-4 rounded-2xl text-[10px] font-bold text-right border border-slate-100 shadow-inner">
+                                                    <p className="flex justify-between items-center">
+                                                        <span className="text-slate-400">اليوزر:</span> 
+                                                        <span className="text-indigo-600">{m.username}</span>
+                                                    </p>
+                                                    <p className="flex justify-between items-center mt-2">
+                                                        <span className="text-slate-400">الباسورد:</span> 
+                                                        <span className="bg-white px-2 py-0.5 rounded border border-slate-100">{m.password}</span>
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {['tasks', 'calendar', 'reports'].includes(activeTab) && (
+                                <div className="h-96 bg-white rounded-[3rem] border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 font-bold space-y-4 shadow-inner text-center"> 
+                                    <Icon name={activeTab === 'tasks' ? 'check' : activeTab === 'calendar' ? 'calendar' : 'file'} size={64} className="opacity-20" /> 
+                                    <div>
+                                        <p className="text-lg">هذه الصفحة غير جاهزة حالياً</p> 
+                                        <p className="text-sm font-medium opacity-60">سيتم تفعيل هذا القسم قريباً عند ربط السحابة.</p> 
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* شاشة التكبير (Lightbox) */}
+                        {zoomedMedia && (
+                            <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4 zoom-overlay" onClick={() => setZoomedMedia(null)}>
+                                <button className="absolute top-8 left-8 text-white p-2 bg-white/10 rounded-full" onClick={() => setZoomedMedia(null)}>
+                                    <Icon name="x" size={32} />
+                                </button>
+                                <div className="max-w-5xl max-h-[90vh] w-full flex items-center justify-center" onClick={e => e.stopPropagation()}>
+                                    {zoomedMedia.type === 'video' ? (
+                                        <video src={zoomedMedia.url} controls autoPlay className="max-w-full max-h-[90vh] rounded-2xl" />
+                                    ) : (
+                                        <img src={zoomedMedia.url} className="max-w-full max-h-[90vh] rounded-2xl object-contain" />
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* نوافذ الإضافة (Modals) */}
+                    {showModal && (
+                        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-[100] flex items-center justify-center p-6 text-right" dir="rtl">
+                            <div className="bg-white rounded-[4rem] w-full max-w-xl shadow-2xl overflow-hidden border animate-in zoom-in-95 duration-300 border-white/20">
+                                <div className="p-10 border-b bg-indigo-50/50 flex justify-between items-center text-right">
+                                    <h3 className="text-2xl font-black text-indigo-950 uppercase">{showModal === 'members' ? 'إضافة عضو جديد' : 'إضافة منشور جديد'}</h3>
+                                    <button onClick={() => {setShowModal(null); setSelectedMedia(null);}} className="p-3 bg-white rounded-2xl text-slate-400 hover:text-rose-600 shadow-sm transition-all"><Icon name="x" size={24}/></button>
+                                </div>
+                                <div className="p-12 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar text-right">
+                                    {showModal === 'members' ? (
+                                        <>
+                                            <input className="w-full p-4 bg-slate-50 rounded-2xl font-bold border-2 border-transparent focus:border-indigo-500 transition-all outline-none text-right" placeholder="اسم العضو الرباعي" onChange={e=>setFormData({...formData, name: e.target.value})} />
+                                            <input className="w-full p-4 bg-slate-50 rounded-2xl font-bold border-2 border-transparent focus:border-indigo-500 transition-all outline-none text-right" placeholder="المسمى الوظيفي" onChange={e=>setFormData({...formData, role: e.target.value})} />
+                                            <div className="bg-slate-950 p-10 rounded-[2.5rem] space-y-5 shadow-inner text-right">
+                                                <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-2 text-right">بيانات الدخول للنظام</p>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <input className="w-full p-4 bg-white/5 rounded-2xl text-sm font-bold text-white outline-none border border-white/10 text-right" placeholder="اسم المستخدم" onChange={e=>setFormData({...formData, username: e.target.value})} />
+                                                    <input className="w-full p-4 bg-white/5 rounded-2xl text-sm font-bold text-white outline-none border border-white/10 text-right" placeholder="كلمة المرور" onChange={e=>setFormData({...formData, password: e.target.value})} />
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <input className="w-full p-4 bg-slate-50 rounded-2xl font-bold border-2 border-transparent focus:border-indigo-500 outline-none text-right" placeholder="العنوان الرئيسي" onChange={e=>setFormData({...formData, title: e.target.value})} />
+                                            <select className="w-full p-4 bg-slate-50 rounded-2xl font-bold border-2 border-transparent focus:border-indigo-500 outline-none text-right" value={formData.type || 'إعلان'} onChange={e=>setFormData({...formData, type: e.target.value})}>
+                                                <option value="إعلان">إعلان عام</option>
+                                                <option value="مسابقة">مسابقة</option>
+                                            </select>
+                                            <textarea className="w-full p-4 bg-slate-50 rounded-2xl font-bold border-2 border-transparent focus:border-indigo-500 outline-none resize-none text-right" rows="4" placeholder="تفاصيل المنشور" onChange={e=>setFormData({...formData, content: e.target.value})}></textarea>
+                                            
+                                            <div className="bg-indigo-50 p-6 rounded-3xl border-2 border-dashed border-indigo-200 text-right">
+                                                <p className="text-xs font-black text-indigo-700 mb-4 flex items-center gap-2 justify-end"><Icon name="image" size={16}/> إرفاق ميديا (صورة أو فيديو)</p>
+                                                <input type="file" id="mediaInput" accept="image/*,video/*" className="hidden" onChange={handleFileChange} />
+                                                <label htmlFor="mediaInput" className="cursor-pointer bg-white border border-indigo-100 p-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-indigo-600 hover:text-white transition-all shadow-sm font-bold text-sm">
+                                                    <Icon name="upload" size={18}/> {selectedMedia ? "تغيير الميديا المختارة" : "اختيار ملف من الجهاز"}
+                                                </label>
+                                                {selectedMedia && (
+                                                    <div className="mt-4 relative rounded-2xl overflow-hidden border-2 border-indigo-400 h-32">
+                                                        {selectedMedia.type === 'video' ? <video src={selectedMedia.url} className="w-full h-full object-cover"/> : <img src={selectedMedia.url} className="w-full h-full object-cover"/>}
+                                                        <button onClick={() => setSelectedMedia(null)} className="absolute top-2 left-2 bg-rose-600 text-white p-1 rounded-lg"><Icon name="x" size={14}/></button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                    <button onClick={handleSave} className="w-full bg-indigo-600 text-white py-5 rounded-3xl font-black shadow-xl hover:bg-slate-900 transition-all text-lg active:scale-95 uppercase text-center">
+                                        {showModal === 'members' ? 'إضافة' : 'نشر'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
